@@ -33,9 +33,7 @@ public class Sample {
     	 String dir=sc.nextLine();
     	 PublicKey pubKey=PemUtils.readPublicKeyFromFile(dir,"RSA");//crosscheck this function;
     	 System.out.println("Enter Encrypted String");
-//    	 String dir2="";
-//    	 dir2=sc.nextLine();
-    	// String sign = new Scanner(new File(dir2)).useDelimiter("\\Z").next();
+
     	 String sign="";
     	
     	 sign=sc.nextLine();
@@ -52,24 +50,6 @@ public class Sample {
     	 Signature signee = Signature.getInstance("SHA256withRSA/PSS");
          
     	 signee.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, 32, 1));//tune salt lenghh and trailer
-         
-   // 	 KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA", "BC");
-
-     //    generator.initialize(1024, random);
-
-   //      KeyPair pair = generator.generateKeyPair();
-        
-     //    PublicKey pubKey = pair.getPublic();
-
-     //    PrivateKey privKey = pair.getPrivate();
-        
-     //    signee.initSign(privKey);
-         
-     //    signee.update(input);
-         
-     //    byte[] signatu = signee.sign();
-         
-     //    System.out.println(new String(signatu));
          
          signee.initVerify(pubKey);
          
