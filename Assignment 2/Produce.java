@@ -47,7 +47,7 @@ public class Produce {
         FileWriter f3=new FileWriter(dir3);
        
         PemWriter real=new PemWriter(f3);
-     	real.writeObject(new PemObject("Key",pubKey.getEncoded()));
+     	real.writeObject(new PemObject("PUBLIC KEY",pubKey.getEncoded()));
      	real.close();
      	f.close();
      	//f1.close();
