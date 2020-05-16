@@ -1,4 +1,4 @@
-package iitkbucks;
+
 
 public class Outputs {
       long coins;
