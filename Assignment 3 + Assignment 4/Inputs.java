@@ -1,4 +1,3 @@
-package iitkbucks;
 
 public class Inputs {
       String ID;
