@@ -184,7 +184,7 @@ class Transaction {
 			    	StringWriter sw=new StringWriter();
 			    	PemWriter now=new PemWriter(sw);
 			    	PublicKey pkey=PemUtils.getPublicKey(pubKey, "RSA");
-			    	now.writeObject(new PemObject("Key",pkey.getEncoded()));
+			    	now.writeObject(new PemObject("PUBLIC KEY",pkey.getEncoded()));
 			    	now.flush();
 			    	String done=sw.toString();
 			    	
