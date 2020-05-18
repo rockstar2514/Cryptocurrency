@@ -36,7 +36,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import spals.shaded.com.google.common.io.BaseEncoding;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -51,7 +50,6 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 class Transaction {
-
 	  public static void newTransaction()throws IOException,NoSuchAlgorithmException{
 		  try{
 			   Scanner sc=new Scanner(System.in);
@@ -73,8 +71,12 @@ class Transaction {
 				   Transaction.append(data,ind);
 				   System.out.println("Enter signature");
 				   String sign=sc.nextLine();
-				   byte[] signature=sign.getBytes("UTF-8");
+				   
+				   
+				  //byte[] signature=sign.getBytes("UTF-8");
+				   byte[] signature=parseHexToByte(sign);
 				   int len=signature.length;
+				   System.out.println(len);
 				   byte[] signlen=(toByte(len));
 				   Transaction.append(data,signlen);
 				   Transaction.append(data,signature);
@@ -86,25 +88,23 @@ class Transaction {
 			   for(int i=0;i<n;i++){
 				   System.out.println("Enter Number of coins.");
 				   long coins=Long.parseLong(sc.nextLine());
-				   System.out.println(coins);
 				   byte[] coin=(toByte(coins));
-				   System.out.println(coin.length);
-				   System.out.println(toLong(coin));
-				   for(int j=0;j<8;j++)
-				   {
-					  System.out.print(coin[j]+" ");
-				   }
-				   System.out.println();
-				   
 				   Transaction.append(data,coin);
 				   System.out.println("Enter directory of .pem file");
 				   String dir=sc.nextLine();
-				   byte[] publicKey=PemUtils.parsePEMFile(new File(dir));
-				   int len=publicKey.length;
-				   byte[] keyLen=(toByte(len));
+				   PublicKey pkey=PemUtils.readPublicKeyFromFile(dir, "RSA");
+//				   byte[] kdata=pkey.getEncoded();
+//				   byte[] keyLen=toByte(kdata.length);
+					StringWriter sw=new StringWriter();
+			    	PemWriter now=new PemWriter(sw);
+			    	now.writeObject(new PemObject("PUBLIC KEY",pkey.getEncoded()));
+			    	now.flush();
+			    	String done=sw.toString();
+			    	now.close();
+                    byte[] kdata=done.getBytes();//UTF-8 ya normal??
+                    byte[] keyLen=toByte(kdata.length);
 				   Transaction.append(data,keyLen);
-				   Transaction.append(data, publicKey);
-				   
+				   Transaction.append(data, kdata);
 			   }
 			   byte[] writableData=new byte[data.size()];
 			   for(int i=0;i<data.size();i++){
@@ -120,7 +120,7 @@ class Transaction {
 			   fis.write(writableData);
                fis.close();
                System.out.println("Operations Completed");
-			   
+			   sc.close();
 		  }
 		  catch(IOException e){
 			  System.out.println("Invalid file name");
@@ -129,16 +129,16 @@ class Transaction {
 		public static void checkTransaction(String dir)throws Exception{
 			File f=new File(dir);
 			if(f.exists()){
-				String TID="";
-				for(int i=dir.length()-5;i>=0;i--)
-				{
-					if (!Character.isDigit(dir.charAt(i))&&!Character.isLetter(dir.charAt(i)))
-						break;
-					TID=dir.charAt(i)+TID;
-					
-					
-				}
-				System.out.println("Transaction ID: "+TID+"\n\n");
+				//String TID="";
+//				for(int i=dir.length()-5;i>=0;i--)
+//				{
+//					if (!Character.isDigit(dir.charAt(i))&&!Character.isLetter(dir.charAt(i)))
+//						break;
+//					TID=dir.charAt(i)+TID;
+//					
+//					
+//				}
+//				System.out.println("Transaction ID: "+TID+"\n\n");
 				
 				FileInputStream fis = new FileInputStream(f);
 			    BufferedInputStream reader = new BufferedInputStream(fis);
@@ -162,7 +162,7 @@ class Transaction {
 			    	int length=toInt(dum);
 			    	byte[] sign=new byte[length];
 			    	reader.read(sign,0,length);
-			    	inflow[i].signature=new String(sign,"UTF-8");
+			    	inflow[i].signature=parseByteToHex(sign);
 			    }
 			    reader.read(inps,0,4);
 			    n=toInt(inps);
@@ -181,17 +181,29 @@ class Transaction {
 			    	byte[] pubKey=new byte[llen];
 			    	reader.read(pubKey,0,llen);
 			    	
-			    	StringWriter sw=new StringWriter();
-			    	PemWriter now=new PemWriter(sw);
-			    	PublicKey pkey=PemUtils.getPublicKey(pubKey, "RSA");
-			    	now.writeObject(new PemObject("PUBLIC KEY",pkey.getEncoded()));
-			    	now.flush();
-			    	String done=sw.toString();
-			    	
-			    	ops[i].publicKey=done;
-			    	now.close();
+//			    	StringWriter sw=new StringWriter();
+//			    	PemWriter now=new PemWriter(sw);
+//			    	PublicKey pkey=PemUtils.getPublicKey(pubKey, "RSA");
+//			    	//System.out.println(i);
+//			    	now.writeObject(new PemObject("PUBLIC KEY",pkey.getEncoded()));
+//			    	now.flush();
+//			    	String done=sw.toString();
+//			    	
+			    	ops[i].publicKey=new String(pubKey);
+			    //	now.close();
 			    
 			    }
+			    reader.close();
+				FileInputStream fis2 = new FileInputStream(f);
+			    BufferedInputStream reader2 = new BufferedInputStream(fis2);
+			    byte[] all=reader2.readAllBytes();
+			    
+                MessageDigest md = MessageDigest.getInstance("SHA-256");  
+		  
+		        
+		        String TID=parseByteToHex(md.digest(all)); 
+			    reader2.close();
+			    System.out.println("Transaction ID: "+TID+"\n\n");
 			    System.out.println("Number of Inputs "+inflow.length+"\n\n");
 			   
 			    for(int i=0;i<inflow.length;i++)
@@ -230,7 +242,8 @@ class Transaction {
 			          System.out.println("Public Key: \n"+printkey);
 			         
 			    }
-			    reader.close();
+			    
+			    
 			}
 			else
 			{
@@ -246,6 +259,7 @@ class Transaction {
 		   }
 	  }
 	  public static byte[] parseHexToByte(String str){
+		  if(str.substring(0,2).contentEquals("0x"))
 		  str=str.substring(2,str.length());
 		  byte[] val = new byte[str.length() / 2];
 		  for (int i = 0; i < val.length; i++) {
