@@ -101,6 +101,7 @@ class Transaction {
 			    	now.flush();
 			    	String done=sw.toString();
 			    	now.close();
+				   done.replaceAll("\r","");
                     byte[] kdata=done.getBytes();//UTF-8 ya normal??
                     byte[] keyLen=toByte(kdata.length);
 				   Transaction.append(data,keyLen);
