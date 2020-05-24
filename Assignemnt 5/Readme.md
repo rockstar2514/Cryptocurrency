@@ -1,6 +1,6 @@
 1.Just clone into a single directory
 
-2.Compile using javac command
+2.Compile using javac command  ( Dependecies -  Guava + Bouncy Castle)
 
 3.Run Block.java usomg java command
 
