@@ -68,7 +68,7 @@ public class Block {
 				       System.out.println("TimeStamp:- "+time+" ns since Epoch");
 				       System.out.println("Nonce:- "+non);
 				       long t2=System.nanoTime();
-				       System.out.println("Time to find value:- "+((t2-t1)/(60e9))+" min "+((t2-t1)%(60e9))+"s");
+				       System.out.println("Time to find value:- "+(t2-t1)+"ns");
 				   }
 			   non++;
 			   
