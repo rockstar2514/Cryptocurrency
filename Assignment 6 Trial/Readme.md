@@ -8,4 +8,8 @@ Run App.java
 
 Then Run Client.java
 
+Be sure that all peers are being listened to by some program
+
+
+
 
