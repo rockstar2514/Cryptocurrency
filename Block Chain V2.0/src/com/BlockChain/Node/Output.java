@@ -134,5 +134,17 @@ public class Output {
 		  //TODO apply check
 		  return true;
 	  }
-
+	  protected PublicKey getKey(int index) {
+		  return keys[index];
+	  }
+      protected long getCoins(int index) {
+    	  return coins[index];
+      }
+      protected long getCoins() {
+    	  long tot=0;
+    	  for(int i=0;i<coins.length;i++) {
+    		   tot+=coins[i];
+    	  }
+    	  return tot;
+      }
 }

@@ -51,6 +51,13 @@ public class EncryptionClient {
 		byte[] arr=clerk.sign();
 		return BaseEncoding.base16().lowerCase().encode(arr);
 	}
-	
+	public boolean verify(String encryptedtexthdump,byte[] original,PublicKey pubKey) throws InvalidKeyException, SignatureException {
+		Security.addProvider(new BouncyCastleProvider());
+		clerk.initVerify(pubKey);
+		clerk.update(original);
+		encryptedtexthdump=encryptedtexthdump.toLowerCase();
+		byte[] enc = BaseEncoding.base16().lowerCase().decode(encryptedtexthdump);
+		return clerk.verify(enc);
+	}
 
 }

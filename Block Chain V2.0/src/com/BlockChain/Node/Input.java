@@ -108,5 +108,23 @@ class Input {
  	          System.out.println("Signature: "+signatures[i]+"\n\n");
  	    }
      }
+     protected String getID(int index) {
+    	 if(index>=0&&index<ids.length)
+    	     return ids[index];
+    	 else
+    		 return null;
+     }
+     protected int getOutputIndex(int index) {
+    	 if(index>=0&&index<ids.length)
+    		 return outputIndex[index];
+    	 else
+    		 return -1;
+     }
+     protected int getNumberofInputs() {
+    	 return inputs;
+     }
+     protected String getSignature(int index) {
+    	 return signatures[index];
+     }
      
 }
