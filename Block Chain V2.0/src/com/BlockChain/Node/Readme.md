@@ -1,10 +1,6 @@
 Transaction Verification
 
-I have assumed that our Node sofware would be either the Server class or a program that uses it. The Server class is commented code of the Web
-
-Server implemented in Assignment 6. I will build it further upon that. The Server class contains a TreeMap of unused Outputs which is declared protected 
-
-and can be accessed by the Transaction class.
+I have assumed that our Node sofware would be either the Server class or a program that uses it. The Server class is commented code of the Web Server implemented in Assignment 6. I will build it further upon that. The Server class contains a TreeMap of unused Outputs which is declared protected and can be accessed by the Transaction class.
 
 Verification is carried out by the verifyExists() function of Tranasaction class same as the mentor has suggested
  
