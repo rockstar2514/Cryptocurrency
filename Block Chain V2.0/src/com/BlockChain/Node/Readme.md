@@ -7,3 +7,6 @@ Verification is carried out by the verifyExists() function of Tranasaction class
 However, this is the second step of verfication I have currently planned to implement. An extra check will be placed in the Input and Output class to avoid other exceptions.
 
 TODO - i can reduce memory consumption by replacing by TreeMap from < pair <string , int> , Output > to < string , Output >  
+
+Part 2
+For the Server part of the code I have created a class ( static informally ) , the Server class that will connect to the other node. When the program is run our node comes into action. But currently I have done the psuedo Code of the recieving part. The endpoints are created in the main() function and are a memmber of class BlockSender and PendingTransactions
