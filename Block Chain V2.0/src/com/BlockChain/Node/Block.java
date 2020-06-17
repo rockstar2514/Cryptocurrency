@@ -17,6 +17,7 @@ public class Block {
       String target;
       long nonce;
       long timestamp;
+      //TODO figure out how to get data from another naode and convert to Block
       public Block(int index,String Phash,Transaction transactions[],String target) throws NoSuchAlgorithmException {
     	  this.pHash=Phash;
     	  this.target=target;
@@ -87,6 +88,12 @@ public class Block {
     	   non--;
     	   nonce=non;
     	   
+      }
+      protected byte[] sendHeader() {
+    	  return header;
+      }
+      protected byte[] getData() {
+    	  return data;
       }
       
 }

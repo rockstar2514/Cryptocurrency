@@ -17,7 +17,31 @@ import com.Util;
 
 //TODO take are of Object handling in memory there is a risk
 public class Transaction {
-       private Input input;
+       protected Input getInput() {
+		return input;
+	}
+	private void setInput(Input input) {
+		this.input = input;
+	}
+	protected Output getOutput() {
+		return output;
+	}
+	private void setOutput(Output output) {
+		this.output = output;
+	}
+	protected String getTID() {
+		return TID;
+	}
+	private void setTID(String tID) {
+		TID = tID;
+	}
+	protected byte[] getFulldata() {
+		return fulldata;
+	}
+	private void setFulldata(byte[] fulldata) {
+		this.fulldata = fulldata;
+	}
+	private Input input;
        private Output output;
        private String TID;
        private byte[] fulldata;
@@ -141,5 +165,6 @@ public class Transaction {
     	     else 
     	    	 return false;
        } 
+       
       
 }

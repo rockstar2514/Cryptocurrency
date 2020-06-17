@@ -21,6 +21,13 @@ public class Output {
 	  private long coins[];
 	  private PublicKey keys[];
 	  private byte[] data;
+	  protected int getOutputs() {
+		  return outputs;
+	  }
+	  protected String KeyToString(int index) {
+		  //TODO Make this function
+		  return "";
+	  }
 	  protected Output(int outputs,long coins[],PublicKey keys[]) throws IOException, InvalidOutputException {
 		    this.outputs=outputs;
 		    this.coins=new long[coins.length];

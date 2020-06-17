@@ -29,7 +29,7 @@ public class TransactionOld {
      private int outputs;//Number of outputs
      private long coins[];//TODO make more classes to distribute code even more
      private String dir[];//Does not always store information
-     private String ID;//TODO Variable RENAMING TID and ID//this is calculated only when file is written
+     private String ID;
      private PublicKey keys[];//TODO check on memory consumption once// this is also calculated during file writing 
      private byte fulldata[];
      private TransactionOld() {}
