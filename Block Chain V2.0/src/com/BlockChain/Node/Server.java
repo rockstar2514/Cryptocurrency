@@ -3,6 +3,7 @@ package com.BlockChain.Node;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -13,15 +14,19 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import com.google.gson.Gson;
 import com.google.gson.stream.JsonWriter;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+
+import com.google.common.io.ByteStreams;
 
 //import App.AddHandler;
 //import App.ListHandler;
@@ -34,6 +39,7 @@ public class Server {
 	  protected static String peers[];
 	  protected static ArrayList < Transaction > pendingTransactions;
 	  protected static BlockChain ledger;
+	  protected static ArrayList<String> Peers;
 	  public static void main(String[] args) throws IOException {
 		  //TODO input URL
 		  //TODO get existing BlockChain
@@ -44,6 +50,88 @@ public class Server {
 		  for(int i=0;i<ledger.size();i++) {
 			  server.createContext("/getBlock/"+String.valueOf(i),new BlockSender(i));
 		  }
+		  server.createContext("/newPeers",new PeerAdder());
+		  server.createContext("/getPeers",new PeerSender());
+		  server.createContext("/newBlock",new MindTheBlock());
+		  server.createContext("/newTransaction",new TransactionReciever());
+		  
+	  }
+	  static class TransactionReciever implements HttpHandler{
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			  Gson gson=new Gson();
+			  String json=new String(ByteStreams.toByteArray(t.getRequestBody()));
+			  parseTransaction tmp=gson.fromJson(json, parseTransaction.class);
+			  tmp.getDetails();
+			  String response="Transaction Recieeved";
+			  t.sendResponseHeaders(200, response.length());
+			  OutputStream os=t.getResponseBody();
+			  os.write(response.getBytes());
+			  os.close();
+		}
+		  
+	  }
+	  static class MindTheBlock implements HttpHandler{//notice the pun :))))
+		  @Override
+		  public void handle(HttpExchange t) throws IOException{
+	            byte[] message=ByteStreams.toByteArray(t.getRequestBody());
+			    //BlockChain.add(Block.parseBlock(message)); TODO later because i need to be sure of the entire program first. Also a lot od check need to be kept in place first and testing to be done
+			    String response="Done";
+			    t.sendResponseHeaders(200, response.length());
+			    OutputStream os=t.getResponseBody();
+			    os.write(response.getBytes());
+			    os.close();
+			    
+		  }    
+	  }
+	  
+	  static class PeerSender implements HttpHandler{
+
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+			    StringWriter sw=new StringWriter();
+		        JsonWriter writer=new JsonWriter(sw);
+			    writer.beginObject();
+			    writer.name("peers");
+			    writer.beginArray();
+			    for(int i=0;i<Peers.size();i++) {
+			    	writer.value(Peers.get(i));
+			    }
+			    writer.endArray();
+			    writer.endObject();
+			    writer.flush();
+			    sw.flush();
+			    String s=sw.toString();
+			    writer.close();
+			    sw.close();
+			    exchange.getResponseHeaders().add("Content-Type","application/json");
+			    exchange.sendResponseHeaders(200, s.length());
+			    OutputStream os=exchange.getResponseBody();
+			    os.write(s.getBytes());
+			    os.close();
+		}
+		  
+	  }
+	  static class PeerAdder implements HttpHandler{
+
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+	
+			    Gson gson = new Gson();
+			    Reader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
+			    Map<?, ?> map = gson.fromJson(reader, Map.class);
+			    for (Map.Entry<?, ?> entry : map.entrySet()) {
+			        entry.getKey(); 
+			        Peers.add((String)(entry.getValue()));
+			    }
+			    reader.close();
+			    String response="Connection Reached";
+			    OutputStream os=exchange.getResponseBody();
+			    exchange.sendResponseHeaders(200, response.length());
+			    os.write(response.getBytes());
+			    os.close();
+		}
+		   
 	  }
 	  static class PendingHandler implements HttpHandler{
 		  @Override
@@ -83,12 +171,12 @@ public class Server {
 	                }
 	                writer.endArray();
 	                writer.flush();
-	                
 	                sw.flush();
-	                writer.close();
-	                sw.close();
 	                String json=sw.toString();
+	                sw.close();
+	                writer.close();
 	                t.getResponseHeaders().add("Content-Type", "application/json");
+	                t.sendResponseHeaders(200, json.length());
 	                OutputStream os = t.getResponseBody();
 	                os.write(json.getBytes());
 	                os.close();
@@ -113,6 +201,7 @@ public class Server {
 		    for(int j=0;j<data2.length;j++){
 		    	fulldata[data1.length+j]=data2[j];
 		    }
+		    exchange.sendResponseHeaders(200, fulldata.length);
 		    OutputStream os=exchange.getResponseBody();
 		    os.write(fulldata);
 		    os.close();
