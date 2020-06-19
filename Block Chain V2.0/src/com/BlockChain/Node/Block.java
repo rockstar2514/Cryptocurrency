@@ -1,9 +1,12 @@
 package com.BlockChain.Node;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
+
+import java.util.Arrays;
 
 import com.Util;
 
@@ -39,6 +42,24 @@ public class Block {
 			      data[i]=dat.get(i);
 		  }
 	      getHeader();
+      }
+      protected Block(byte[] duoChara) throws  InvalidInputException, IOException, InvalidOutputException, NoSuchAlgorithmException {
+    	  header=Arrays.copyOfRange(duoChara, 0, 116);
+    	  data=Arrays.copyOfRange(duoChara, 116, duoChara.length);
+    	  index=Util.toInt(Arrays.copyOfRange(duoChara, 0, 4));
+    	  pHash=Util.parseByteToHex(Arrays.copyOfRange(duoChara, 4,4+32));
+    	  target=Util.parseByteToHex(Arrays.copyOfRange(duoChara,4+32+32,4+32+32+32));
+    	  timestamp=Util.toLong(Arrays.copyOfRange(duoChara, 4+32+32+32, 4+32+32+32+8));
+    	  nonce=Util.toLong(Arrays.copyOfRange(duoChara,4+32+32+32+8,4+32+32+32+8+8));
+    	  count=Util.toInt(Arrays.copyOfRange(duoChara, 116, 116+4));
+    	  transactions=new Transaction[count];
+    	  int ind=116+4;
+    	  for(int i=0;i<count;i++) {
+    		  int size=Util.toInt(Arrays.copyOfRange(duoChara,ind,ind+4));
+    		  ind+=4;
+    		  transactions[i]=Transaction.getTransaction(Arrays.copyOfRange(duoChara,ind,ind+size));
+    		  ind+=size;
+    	  }
       }
       private void getHeader() throws NoSuchAlgorithmException {
     	  header=new byte[116];

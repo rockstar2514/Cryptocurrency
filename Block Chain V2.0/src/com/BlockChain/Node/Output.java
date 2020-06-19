@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
@@ -27,6 +28,21 @@ public class Output {
 	  protected String KeyToString(int index) {
 		  //TODO Make this function
 		  return "";
+	  }
+	  protected static Output parseOutput(Outputo[] arr) throws IOException, InvalidOutputException {
+		  int outputs=arr.length;
+		  long coins[]=new long[outputs];
+		  PublicKey keys[]=new PublicKey[outputs];
+		  for(int i=0;i<outputs;i++) {
+			  coins[i]=arr[i].getAmount();
+	    	StringReader sr=new StringReader(arr[i].recipient);
+	    	PemReader r2=new PemReader(sr);
+	    	PemObject pemObject=r2.readPemObject();
+	    	keys[i]=Util.getPublicKey(pemObject.getContent(),"RSA");
+	    	r2.close();
+		  }
+		  return new Output(outputs,coins,keys);
+		  
 	  }
 	  protected Output(int outputs,long coins[],PublicKey keys[]) throws IOException, InvalidOutputException {
 		    this.outputs=outputs;
@@ -114,6 +130,26 @@ public class Output {
 		    reader.close();
 		    return new Output(outputs,coins,keys);
 	 	  
+	  }
+	  protected static Output read ( byte[] d,int offset) throws IOException, InvalidOutputException {
+		  int outputs=Util.toInt(Arrays.copyOfRange(d,offset,offset+4));
+		  long coins[]=new long[outputs];
+		  PublicKey keys[]=new PublicKey[outputs];
+		  int ind=offset+4;
+		  for(int i=0;i<outputs;i++) {
+			  coins[i]=Util.toLong(Arrays.copyOfRange(d,ind,ind+8));
+			  ind+=8;
+			  int length=Util.toInt(Arrays.copyOfRange(d,ind,ind+4));
+			  ind+=4;
+			  StringReader sr=new StringReader(new String(Arrays.copyOfRange(d,ind,ind+length)));
+			  ind+=length;
+			  PemReader r2=new PemReader(sr);
+		      PemObject pemObject=r2.readPemObject();
+		      keys[i]=Util.getPublicKey(pemObject.getContent(),"RSA");//TODO verify this part and also check if Algorithm need generalissation
+		      r2.close();
+		      sr.close();
+		  }
+		 return new Output(outputs,coins,keys);
 	  }
 	  protected void print() throws IOException {
 		  System.out.println("Number of Outputs "+outputs+"\n\n");

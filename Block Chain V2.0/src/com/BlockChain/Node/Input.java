@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import java.util.Arrays;
+
 import com.Util;
 
 class Input {
@@ -51,6 +53,21 @@ class Input {
 			  data[i]=dat.get(i);
 		  }
      }
+     protected static Input parseInput(Inputi[] arr) throws InvalidInputException {
+    	  int inputs=arr.length;
+    	  String ids[]=new String[inputs];
+    	  String signatures[]=new String[inputs];
+    	  int outputIndex[]=new int[inputs];
+    	  for(int i=0;i<arr.length;i++) {
+    		  ids[i]=arr[i].getTransactionID();
+    		  outputIndex[i]=arr[i].getIndex();
+    		  signatures[i]=arr[i].getSignature();
+    	  }
+    	  return new Input(inputs,ids,outputIndex,signatures);
+     }
+     protected int getLengthOfData() {
+    	 return data.length;
+     }
      protected byte[] getData() {
     	 byte[] copy=new byte[data.length];
     	 for(int i=0;i<copy.length;i++) {
@@ -91,6 +108,24 @@ class Input {
  	   reader.close();
  	    return new Input(inputs,ID,outputIndex,signatures);
  	   
+     }
+     protected static Input read (byte[] d,int offset) throws InvalidInputException {
+    	 int inputs=Util.toInt(Arrays.copyOfRange(d,offset,offset+4));
+    	 String ID[]=new String[inputs];
+    	 int outputIndex[]=new int[inputs];
+    	 String signatures[]=new String[inputs];
+    	 int ind=offset+4;
+    	 for(int i=0;i<inputs;i++) {
+    		 ID[i]=Util.parseByteToHex(Arrays.copyOfRange(d, ind, ind+32));
+    		 ind+=32;
+    		 outputIndex[i]=Util.toInt(Arrays.copyOfRange(d,ind,ind+4));
+    		 ind+=4;
+    		 int length=Util.toInt(Arrays.copyOfRange(d, ind, ind+4));
+    		 ind+=4;
+    		 signatures[i]=Util.parseByteToHex(Arrays.copyOfRange(d,ind,ind+length));
+    		 ind+=length;
+    	 }
+    	 return new Input(inputs,ID,outputIndex,signatures);
      }
      protected void print() {
     	 System.out.println("Number of Inputs "+inputs+"\n\n");

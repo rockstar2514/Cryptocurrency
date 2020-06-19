@@ -17,31 +17,23 @@ import com.Util;
 
 //TODO take are of Object handling in memory there is a risk
 public class Transaction {
-       protected Input getInput() {
-		return input;
-	}
-	private void setInput(Input input) {
-		this.input = input;
-	}
-	protected Output getOutput() {
-		return output;
-	}
-	private void setOutput(Output output) {
-		this.output = output;
-	}
-	protected String getTID() {
-		return TID;
-	}
-	private void setTID(String tID) {
-		TID = tID;
-	}
-	protected byte[] getFulldata() {
-		return fulldata;
-	}
-	private void setFulldata(byte[] fulldata) {
-		this.fulldata = fulldata;
-	}
-	private Input input;
+	       protected Input getInput() {
+			return input;
+		}
+		
+		protected Output getOutput() {
+			return output;
+		}
+		
+		protected String getTID() {
+			return TID;
+		}
+		
+		protected byte[] getFulldata() {
+			return fulldata;
+		}
+		
+	   private Input input;
        private Output output;
        private String TID;
        private byte[] fulldata;
@@ -58,6 +50,11 @@ public class Transaction {
     	    	 fulldata[arr1.length+i]=arr2[i];
     	     MessageDigest md = MessageDigest.getInstance("SHA-256");  
     	     TID=Util.parseByteToHex(md.digest(fulldata));
+       }
+       protected static Transaction getTransaction(byte[] arr) throws InvalidInputException, IOException, InvalidOutputException, NoSuchAlgorithmException {
+           Input input=Input.read(arr, 0);
+           Output output=Output.read(arr, input.getLengthOfData());//TODO can decrease time here signifinatnly Make new parameter function please
+           return new Transaction(input,output);
        }
        protected static Transaction getTransaction(File f) throws IOException, InvalidOutputException, InvalidInputException, NoSuchAlgorithmException {
     	   if(f.exists()){

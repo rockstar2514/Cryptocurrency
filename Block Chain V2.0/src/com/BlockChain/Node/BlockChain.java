@@ -15,5 +15,10 @@ public class BlockChain {
      protected int size() {
     	 return ledger.size();
      }
+     protected boolean add(Block b) {
+    	 ledger.add(b);
+    	 return true;
+     }
+     
 }
 

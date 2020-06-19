@@ -43,7 +43,7 @@ public class Server {
 	  public static void main(String[] args) throws IOException {
 		  //TODO input URL
 		  //TODO get existing BlockChain
-		  //TODO get pending transaction
+		  //TODO get pending transaction//TODO should I use UTF-8 OR UTF-16
 		  //Update BlockChain
 		  HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);
 		  server.createContext("/getPendingTransaction",new PendingHandler());
@@ -54,7 +54,6 @@ public class Server {
 		  server.createContext("/getPeers",new PeerSender());
 		  server.createContext("/newBlock",new MindTheBlock());
 		  server.createContext("/newTransaction",new TransactionReciever());
-		  
 	  }
 	  static class TransactionReciever implements HttpHandler{
 		@Override
@@ -63,7 +62,13 @@ public class Server {
 			  String json=new String(ByteStreams.toByteArray(t.getRequestBody()));
 			  parseTransaction tmp=gson.fromJson(json, parseTransaction.class);
 			  tmp.getDetails();
-			  String response="Transaction Recieeved";
+			  String response="Transaction Recieved";
+			  try {
+				pendingTransactions.add(tmp.getRealTransaction());
+			  } catch (NoSuchAlgorithmException | IOException | InvalidOutputException | InvalidInputException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			  }
 			  t.sendResponseHeaders(200, response.length());
 			  OutputStream os=t.getResponseBody();
 			  os.write(response.getBytes());
@@ -75,13 +80,17 @@ public class Server {
 		  @Override
 		  public void handle(HttpExchange t) throws IOException{
 	            byte[] message=ByteStreams.toByteArray(t.getRequestBody());
-			    //BlockChain.add(Block.parseBlock(message)); TODO later because i need to be sure of the entire program first. Also a lot od check need to be kept in place first and testing to be done
-			    String response="Done";
-			    t.sendResponseHeaders(200, response.length());
-			    OutputStream os=t.getResponseBody();
-			    os.write(response.getBytes());
-			    os.close();
-			    
+				try {
+					Block newb = new Block(message);
+					ledger.add(newb);
+		            String response="Done";
+				    t.sendResponseHeaders(200, response.length());
+				    OutputStream os=t.getResponseBody();
+				    os.write(response.getBytes());
+				    os.close();
+				} catch (NoSuchAlgorithmException | InvalidInputException | IOException | InvalidOutputException e) {
+					e.printStackTrace();
+				}
 		  }    
 	  }
 	  
