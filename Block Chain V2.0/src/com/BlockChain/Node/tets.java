@@ -5,6 +5,10 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,7 +23,7 @@ import com.sun.net.httpserver.HttpServer;
 
 public class tets {
 	protected static byte data[];
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 //    	StringWriter sw=new StringWriter();
 //        JsonWriter writer=new JsonWriter(sw);
 //        //writer.beginObject();
@@ -78,31 +82,48 @@ public class tets {
 ////    	    }//for recieving get peer endpoint
 //    	    // close reader
 //    	    parseTransaction tmp=gson.fromJson(json, parseTransaction.class);
-//    	    tmp.getDetails();
+////    	    tmp.getDetails();
     	HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);
-    	data=new byte[15];
-    	for(byte i=0;i<15;i++) {
-    		data[i]=(byte)(i*2);
-    		server.createContext("/getBlock/"+String.valueOf(i),new ByteSender(i));
-    	}
+  	        data=new byte[16];
+  	        data[15]=30;
+  	        for(int i=0;i<16;i++)
+  	        	data[i]=(byte)(i*2);
+    		server.createContext("/getBlock/",new ByteSender());
     	server.start();
+//    	String url="https://google.com/";
+//    	HttpClient client = HttpClient.newHttpClient();
+//    	HttpRequest request2 = HttpRequest.newBuilder()
+//                .uri(URI.create(url+"list"))
+//                .build();
+//	    HttpResponse<String> response2 = client.send(request2,
+//	                     HttpResponse.BodyHandlers.ofString());
+//	    System.out.println(response2.statusCode());
     }
     static class ByteSender implements HttpHandler{
-		  private int i;
-		  protected ByteSender(int i) {
-			  this.i=i;
-		  }
 		@Override
 		public void handle(HttpExchange exchange) throws IOException {
 			// TODO send data required
 			//TODO some exception handling
+			//System.out.println(exchange.getRequestURI());
+			String req=exchange.getRequestURI().toString();
+			req=req.substring(req.lastIndexOf("/")+1);
+			System.out.println(req);
+			int ind=Integer.parseInt(req);
 			exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
 			byte[] dat=new byte[1];
-			dat[0]=data[i];
+			data[0]=-1;
+			if(ind>=data.length) {
+				exchange.sendResponseHeaders(404, dat.length);
+			}
+			else
+			{
+			dat[0]=data[ind];
 			exchange.sendResponseHeaders(200, dat.length);
-		    OutputStream os=exchange.getResponseBody();
+			}
+			 OutputStream os=exchange.getResponseBody();
 		    os.write(dat);
 		    os.close();
+			
 		}
 		  
 	  }    

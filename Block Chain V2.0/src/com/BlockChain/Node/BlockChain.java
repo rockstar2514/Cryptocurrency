@@ -7,6 +7,7 @@ public class BlockChain {
      //TODO define a way to get a BlockChain from another node data
      protected void addBlock(Block b) {
     	 ledger.add(b);
+    	 //TODO here call a function to all transaction in the blockchan that will remove the respective inputs and insert in unused Outputs
      }
      //TODO much things left
      protected Block getBlock(int i) {

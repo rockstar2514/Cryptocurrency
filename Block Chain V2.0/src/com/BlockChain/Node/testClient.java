@@ -27,8 +27,11 @@ public class testClient {
         			HttpRequest request2 = HttpRequest.newBuilder()
                             .uri(URI.create(URL))
                             .build();
+        			System.out.println(request2.uri());
        		             HttpResponse<String> response2 = client.send(request2,
        		                     HttpResponse.BodyHandlers.ofString());
+       		          System.out.println(request2.uri());
+       		             System.out.println(response2.statusCode());
        		            byte[] all=response2.body().getBytes();
        		            System.out.println(all.length);
        		            for(int i=0;i<all.length;i++) {
