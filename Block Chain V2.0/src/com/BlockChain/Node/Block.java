@@ -20,6 +20,7 @@ public class Block {
       String target;
       long nonce;
       long timestamp;
+      boolean bah=true;
       //TODO figure out how to get data from another naode and convert to Block
       public Block(int index,String Phash,Transaction transactions[],String target) throws NoSuchAlgorithmException {
     	  this.pHash=Phash;
@@ -44,7 +45,7 @@ public class Block {
 	      getHeader();
       }
       protected Block(byte[] duoChara) throws  InvalidInputException, IOException, InvalidOutputException, NoSuchAlgorithmException {
-    	  header=Arrays.copyOfRange(duoChara, 0, 116);
+    	 // header=Arrays.copyOfRange(duoChara, 0, 116);
     	  data=Arrays.copyOfRange(duoChara, 116, duoChara.length);
     	  index=Util.toInt(Arrays.copyOfRange(duoChara, 0, 4));
     	  pHash=Util.parseByteToHex(Arrays.copyOfRange(duoChara, 4,4+32));
@@ -60,6 +61,14 @@ public class Block {
     		  transactions[i]=Transaction.getTransaction(Arrays.copyOfRange(duoChara,ind,ind+size));
     		  ind+=size;
     	  }
+    	  getHeader();
+    	  if(!Arrays.equals(header, Arrays.copyOfRange(duoChara, 0, 116))) {
+    		  bah=false;//Incorrect Block//TODO Add checks
+    	  }
+    	  MessageDigest md = MessageDigest.getInstance("SHA-256");
+		  byte[] c=md.digest(header);
+		  if(Util.cmpHex(Util.parseByteToHex(c), target)>0)
+			  bah=false;
       }
       private void getHeader() throws NoSuchAlgorithmException {
     	  header=new byte[116];
@@ -116,5 +125,8 @@ public class Block {
       protected byte[] getData() {
     	  return data;
       }
-      
+      protected String getHash() throws NoSuchAlgorithmException {
+    	  MessageDigest md = MessageDigest.getInstance("SHA-256");
+    	   return new String(md.digest(header));
+      }
 }

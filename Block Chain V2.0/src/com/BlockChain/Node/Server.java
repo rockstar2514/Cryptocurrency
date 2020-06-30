@@ -44,30 +44,28 @@ import com.google.common.io.ByteStreams;
 public class Server {
 
 	  protected static TreeMap<Link,Output> unusedOutputs;//TODO deal with this.quite inefficient
-	  protected static String peers[];
-	  protected static ArrayList < Transaction > pendingTransactions;
-	  protected static BlockChain ledger;
-	  protected static ArrayList<String> Peers;
-	  protected static int peerLimit=5;
+	  protected static ArrayList < Transaction > pendingTransactions;// Transactions yet to be mined
+	  protected static BlockChain ledger;//Out own blockChain//TODO reduce memory consumption by writing to a local file
+	  protected static ArrayList<String> Peers;// Address of Peers
+	  protected static int peerLimit=5;// Peer limit to enable better networking
 	  public static void main(String[] args) throws IOException, InterruptedException, NoSuchAlgorithmException, InvalidInputException, InvalidOutputException, InvalidKeyException, InvalidAlgorithmParameterException, SignatureException {
 		  Scanner sc=new Scanner(System.in);
-		  //TODO input URL
-		  //TODO get existing BlockChain
-		  //TODO get pending transaction//TODO should I use UTF-8 OR UTF-16
+		  //TODO should I use UTF-8 OR UTF-16 for pending transaction
 		  //Update BlockChain
-		  HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);//TODO change backlog value here
-		  String adress="";
-		  adress=sc.nextLine();
-		  String OriginalPeer="";
+		  HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);//TODO change backlog value here//Listening to port 8000 on local host
+		  String address="";//Input your own address after tunneling via ngrok
+		  address=sc.nextLine();
+		  String OriginalPeer="";//Input initial peers//TODO add optionally functionality to input more than 1 address
 		  OriginalPeer=sc.nextLine();
-		  fetchPeers(OriginalPeer,adress);
+		  if(OriginalPeer.charAt(OriginalPeer.length()-1)=='/')
+			  OriginalPeer=OriginalPeer.substring(0,OriginalPeer.length()-1);
+		  fetchPeers(OriginalPeer,address);
 		  if(Peers.size()==0) {
 			  System.out.println("Sedlyf u r alone");
 			  System.exit(1);
 		  }
-		  fetchBlocks(OriginalPeer);
-		  if(OriginalPeer.charAt(OriginalPeer.length()-1)=='/')
-			  OriginalPeer=OriginalPeer.substring(0,OriginalPeer.length()-1);
+		  fetchBlocks(OriginalPeer);//TODO change this for some reason
+		 
 		  HttpClient client=HttpClient.newHttpClient();
 		  HttpRequest request = HttpRequest.newBuilder()
                   .uri(URI.create(OriginalPeer+"/getPendingTransactions"))
@@ -101,12 +99,17 @@ public class Server {
 				  break;
 			  byte[] binarydata=response.body().getBytes();
 			  Block b=new Block(binarydata);
+			  if(verifyBlock(b))
 			  ledger.add(b);//TODO Modify to save on computer otherwise memory will exceed quickly
+			  else 
+			  {
+				  //TODO Add Incorrect Block Handling Cases
+			  }
 			  for(int i=0;i<b.transactions.length;i++) {
 				  Transaction t=b.transactions[i];
 				  if(!verifyTransaction(t))
 					  {
-					  System.out.println("Peers has send an Invalid Transaction Shtting Down");
+					  System.out.println("Peers has send an Invalid Transaction .Shutting Down");//TODO Decide course of action
 					  System.exit(1);
 					  }
 				  updateUnusedOutputs(t);
@@ -114,7 +117,7 @@ public class Server {
 			  ind++;
 		  }
 		  
-		  // here make respective changes int the block
+		  // here make respective changes in the block
 		  //ask for pending Transaction
 	  }
 	  protected static void updateUnusedOutputs(Transaction t) {
@@ -130,6 +133,7 @@ public class Server {
 		   }
 	  }
 	  protected static void fetchPeers(String s,String add) throws IOException, InterruptedException {
+		  // Function to add peers quite similiar to dfs :-)
 		  TreeSet<String> covered=new TreeSet<>();
 		  TreeSet<String> potential=new TreeSet<>();
 		  potential.add(s);
@@ -137,11 +141,7 @@ public class Server {
 		  HttpClient client = HttpClient.newHttpClient();
 		  StringWriter sw=new StringWriter();
 		  JsonWriter writer=new JsonWriter(sw);
-		  writer.beginObject();
-		  writer.name("url");
-		  writer.value(add);
-		  writer.endObject();
-		  writer.flush();
+		  writer.beginObject();writer.name("url");writer.value(add);writer.endObject();writer.flush();//writing json file to send my own url to peers so he can add my address in her/his own peers list
 		  String json=sw.toString();
 		  writer.close();
 		  sw.close();
@@ -151,7 +151,7 @@ public class Server {
 			 HttpRequest request = HttpRequest.newBuilder()
                      .uri(URI.create(curr+"/newPeer"))
                      .POST(HttpRequest.BodyPublishers.ofString(json))
-                     .build();//need to test this for sending json as String 
+                     .build();//TODO TEST need to test this for sending json as String 
 			 HttpResponse<String> response = client.send(request,
 	                  HttpResponse.BodyHandlers.ofString());
 			 if(response.statusCode()==200){
@@ -163,16 +163,18 @@ public class Server {
 			 response = client.send(request,
 	                  HttpResponse.BodyHandlers.ofString());
 			 Gson gson=new Gson();
-			 Map<? , ?> map=gson.fromJson(response.body(), Map.class);//test this locally with String aarguement
+			 Map<? , ?> map=gson.fromJson(response.body(), Map.class);//TODO test this locally with String arguement
 			 for (Map.Entry<?, ?> entry : map.entrySet()) {
- 	    	    ArrayList<String> arr=(ArrayList< String >)(entry.getValue());//exception handling
+ 	    	    @SuppressWarnings("unchecked")
+				ArrayList<String> arr=(ArrayList< String >)(entry.getValue());//exception handling
  	    	    for(int i=0;i<arr.size();i++) {
- 	    		    if(!covered.contains(arr.get(i))) {
+ 	    		    if(!covered.contains(arr.get(i))) {//TODO test thsi contains function
  	    		    	  potential.add(arr.get(i));
  	    		    	  covered.add(arr.get(i));
  	    		    }
  	          	}
-	        } 
+	        }
+			 potential.remove(curr);//TODO TEST this
 		  }
 	  }
 	  protected static boolean verifyTransaction(Transaction t) throws InvalidKeyException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, SignatureException {
@@ -255,7 +257,12 @@ public class Server {
 	            byte[] message=ByteStreams.toByteArray(t.getRequestBody());
 				try {
 					Block newb = new Block(message);
+					if(verifyBlock(b))
 					ledger.add(newb);
+					else
+					{
+						//TODO Incorrect Block Handling Case
+					}
 		            String response="Done";
 				    t.sendResponseHeaders(200, response.length());
 				    OutputStream os=t.getResponseBody();
@@ -401,6 +408,63 @@ public class Server {
 		  
 	  }
     
-	
+		 protected static boolean verifyBlock(Block b) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidAlgorithmParameterException {
+			 boolean bob=true;
+			  for(int j=1;j<b.count;j++) {
+				  Transaction t=b.transactions[j];
+				   long inputcoins=0;
+			   	   long outputcoins=0;
+			   	   Input input=t.getInput();
+			   	   int n=input.getNumberofInputs();
+			   	   TreeSet<Link> s=new TreeSet<>();
+			   	   EncryptionClient enc=new EncryptionClient();
+			   	     for(int i=0;i<n;i++) {
+			   	    	 String key1=input.getID(i);
+			   	    	 int val=input.getOutputIndex(i);
+			   	    	 Link l=new Link(key1,val);
+			   	    	 if(Server.unusedOutputs.containsKey(l))
+			   	    	 {
+			   	    		 if(s.contains(l))
+			   	    			 return false;
+			   	    		 else
+			   	    		 {
+			   	    			 s.add(l);
+			   	    			 Output p=Server.unusedOutputs.get(l);//TODO take care of memeory consumption
+			   	    			 byte[] arr=p.getData();
+			   	    			 MessageDigest md = MessageDigest.getInstance("SHA-256");  
+			   	        	     byte[] hash=(md.digest(arr));
+			   	        	     byte[] signingdata=new byte[68];
+			   	        	     byte[] hash1=Util.parseHexToByte(key1);
+			   	        	     
+			   	        	     for(int k=0;k<32;k++) {
+			   	        	    	 signingdata[k]=hash1[k];
+			   	        	     }
+			   	        	     byte[] more=Util.toByte(val);
+			   	        	     for(int k=0;k<4;k++) {
+			   	        	    	 signingdata[32+k]=more[k];
+			   	        	     }
+			   	        	     for(int k=0;k<32;k++) {
+			   	        	    	 signingdata[32+4+k]=hash[k];
+			   	        	     }
+			   	        	     if(!enc.verify(input.getSignature(i),signingdata , p.getKey(val)))
+			   	        	       return false;
+			   	        	     inputcoins+=p.getCoins(val);
+			   	    		 }
+			   	    	 }
+			   	    	 else {
+			   	    		 return false;
+			   	    	 }
+			   	    	 
+			   	     }
+			   	     outputcoins+=t.getOutput().getCoins();
+			   	     if(inputcoins>outputcoins)
+			   	    	 return false;
+			  }
+			  if(b.bah==false)
+				  return false;
+			  if(!b.pHash.contentEquals(ledger.ledger.get(ledger.ledger.size()-1).getHash()))
+				  return false;
+			  return true;
+		 }
 	
 }
