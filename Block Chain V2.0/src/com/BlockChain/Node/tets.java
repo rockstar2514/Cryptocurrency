@@ -83,21 +83,29 @@ public class tets {
 //    	    // close reader
 //    	    parseTransaction tmp=gson.fromJson(json, parseTransaction.class);
 ////    	    tmp.getDetails();
-    	HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);
-  	        data=new byte[16];
-  	        data[15]=30;
-  	        for(int i=0;i<16;i++)
-  	        	data[i]=(byte)(i*2);
-    		server.createContext("/getBlock/",new ByteSender());
-    	server.start();
-//    	String url="https://google.com/";
-//    	HttpClient client = HttpClient.newHttpClient();
-//    	HttpRequest request2 = HttpRequest.newBuilder()
-//                .uri(URI.create(url+"list"))
-//                .build();
-//	    HttpResponse<String> response2 = client.send(request2,
-//	                     HttpResponse.BodyHandlers.ofString());
-//	    System.out.println(response2.statusCode());
+//    	HttpServer server = HttpServer.create(new InetSocketAddress(8000),0);
+//  	        data=new byte[16];
+//  	        data[15]=30;
+//  	        for(int i=0;i<16;i++)
+//  	        	data[i]=(byte)(i*2);
+//    		server.createContext("/getBlock/",new ByteSender());
+//    	server.start();
+////    	String url="https://google.com/";
+////    	HttpClient client = HttpClient.newHttpClient();
+////    	HttpRequest request2 = HttpRequest.newBuilder()
+////                .uri(URI.create(url+"list"))
+////                .build();
+////	    HttpResponse<String> response2 = client.send(request2,
+////	                     HttpResponse.BodyHandlers.ofString());
+////	    System.out.println(response2.statusCode());
+    	Thread t=new Thread(new Haha());
+    	t.start();
+    }
+    static class Haha implements Runnable{
+		@Override
+		public void run() {
+			System.out.println("Testing Thread ans Runnable Interface");
+		}	
     }
     static class ByteSender implements HttpHandler{
 		@Override

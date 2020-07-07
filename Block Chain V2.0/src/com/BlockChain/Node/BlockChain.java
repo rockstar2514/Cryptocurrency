@@ -1,25 +1,35 @@
 package com.BlockChain.Node;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 
+import org.bouncycastle.util.Arrays;
+
 public class BlockChain {
-     ArrayList<Block> ledger;
+     private Block last;
+     private String dir;
+     private String target;
+     private int size=0;
      //TODO define a way to get a BlockChain from another node data
-     protected void addBlock(Block b) {
-    	 ledger.add(b);
-    	 //TODO here call a function to all transaction in the blockchan that will remove the respective inputs and insert in unused Outputs
+     protected BlockChain(String d,String target) {
+    	 dir=d;
+    	 this.target=target;
+     }
+     protected void addBlock(Block b) {	 
+    try {Files.write(Paths.get(dir), Arrays.concatenate(b.getHeader(),b.getData()), StandardOpenOption.APPEND);size++;last=b;} catch (IOException e) {System.out.println("File to print Block Chain to not found . Fuck OFf");System.exit(1);e.printStackTrace();}	 
      }
      //TODO much things left
-     protected Block getBlock(int i) {
-    	 return ledger.get(i);
+     protected int getSize() {
+    	 return size;
      }
-     protected int size() {
-    	 return ledger.size();
+     protected Block getTop() {
+    	 return last;
      }
-     protected boolean add(Block b) {
-    	 ledger.add(b);
-    	 return true;
+     protected String getTarget() {
+    	 return target;
      }
-     
 }
 
