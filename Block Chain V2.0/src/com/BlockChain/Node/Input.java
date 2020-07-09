@@ -109,7 +109,7 @@ class Input {
  	    return new Input(inputs,ID,outputIndex,signatures);
  	   
      }
-     protected static Input read (byte[] d,int offset) throws InvalidInputException {
+     protected static Input read (byte[] d,int offset) throws InvalidInputException {//TODO big Doubt here maybe this will not work
     	 int inputs=Util.toInt(Arrays.copyOfRange(d,offset,offset+4));
     	 String ID[]=new String[inputs];
     	 int outputIndex[]=new int[inputs];
@@ -122,7 +122,7 @@ class Input {
     		 ind+=4;
     		 int length=Util.toInt(Arrays.copyOfRange(d, ind, ind+4));
     		 ind+=4;
-    		 signatures[i]=Util.parseByteToHex(Arrays.copyOfRange(d,ind,ind+length));
+    		 signatures[i]=Util.parseByteToHex(Arrays.copyOfRange(d,ind,ind+length));//Maybe this length is wrong
     		 ind+=length;
     	 }
     	 return new Input(inputs,ID,outputIndex,signatures);

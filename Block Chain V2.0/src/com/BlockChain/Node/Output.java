@@ -6,15 +6,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
-
 import com.Util;
 
 public class Output {
@@ -89,7 +86,7 @@ public class Output {
 			       String done=sw.toString();
 			       done=done.replaceAll("\r","");//trimming keys.Maybe trimming required when files are read. TODO
 			       now.close();
-	               byte[] kdata=done.getBytes("UTF-8");//UTF-8 ya normal?? TODO
+	               byte[] kdata=done.getBytes("UTF-8");
 	               byte[] keyLen=Util.toByte(kdata.length);
 				   Util.append(dat,keyLen);
 				   Util.append(dat, kdata);
@@ -145,7 +142,7 @@ public class Output {
 			  ind+=length;
 			  PemReader r2=new PemReader(sr);
 		      PemObject pemObject=r2.readPemObject();
-		      keys[i]=Util.getPublicKey(pemObject.getContent(),"RSA");//TODO verify this part and also check if Algorithm need generalissation
+		      keys[i]=Util.getPublicKey(pemObject.getContent(),"RSA");//TODO verify this part and also check if Algorithm need generalisation
 		      r2.close();
 		      sr.close();
 		  }
@@ -153,8 +150,7 @@ public class Output {
 	  }
 	  protected void print() throws IOException {
 		  System.out.println("Number of Outputs "+outputs+"\n\n");
-		    for(int i=0;i<outputs;i++)
-		    {
+		    for(int i=0;i<outputs;i++){
 		    	  System.out.println("      Output #"+(i+1));
 		    	  System.out.print("               ");
 		          System.out.println("Number of Coins: "+coins[i]);
@@ -167,7 +163,7 @@ public class Output {
 			      now.close();
 			      done=done.replaceAll("\r", "");
 		          System.out.println("Length of Public Key: "+done.length());
-		          System.out.println("Public Key: \n"+done);//TODO test all this shit
+		          System.out.println("Public Key: \n"+done);
 		    }
 	  }
 	  protected byte[] getData() {

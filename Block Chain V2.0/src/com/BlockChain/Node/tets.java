@@ -131,7 +131,6 @@ public class tets {
 			 OutputStream os=exchange.getResponseBody();
 		    os.write(dat);
 		    os.close();
-			
 		}
 		  
 	  }    

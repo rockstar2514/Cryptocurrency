@@ -11,16 +11,16 @@ import java.util.Arrays;
 import com.Util;
 
 public class Block {
-	private volatile int index;
-	private volatile String pHash;
-	private volatile int count;
-	private volatile byte[] header;
-	private volatile Transaction[] transactions;
-	private volatile byte[] data;
-	private volatile String target;
-	private volatile long nonce;
-	private volatile long timestamp;
-	private volatile boolean bah=true;
+	private int index;
+	private String pHash;
+	private int count;
+	private byte[] header;
+	private Transaction[] transactions;
+	private byte[] data;
+	private String target;
+	private long nonce;
+	private long timestamp;
+	private boolean bah=true;
 	public Block(int index,String Phash,Transaction transactions[],String target) throws NoSuchAlgorithmException {
 		this.pHash=Phash;
 		this.target=target;
@@ -74,7 +74,6 @@ public class Block {
 				transactions[i]=Transaction.getTransaction(Arrays.copyOfRange(duoChara,ind,ind+size));
 				ind+=size;
 			}
-			//TODO check if header has been calculated properly
 			byte[] currHash=(Arrays.copyOfRange(duoChara,4+32,4+32+32));
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 			byte[] actHash=md.digest(data);
@@ -87,7 +86,7 @@ public class Block {
 						bah=false;
 				}
 			}
-			if(bah==true){
+			if(bah){
 				byte[] c=md.digest(header);
 				if(Util.cmpHex(Util.parseByteToHex(c), target)>0)
 					bah=false;
@@ -99,10 +98,12 @@ public class Block {
 			System.out.println("Something seriously wrong with binary data");
 		}
 		catch( InvalidInputException e) {
+			bah=false;
 			e.printStackTrace();
 			System.out.println("BLock with Invlaid Input Binary Data recieved");
 		}
 		catch( InvalidOutputException e) {
+			bah=false;
 			e.printStackTrace();
 			System.out.println("BLock with Invlaid Input Binary Data recieved");
 		}
@@ -146,5 +147,10 @@ public class Block {
 	}
 	protected boolean getbah() {
 		return bah;
+	}
+	protected void getReceipt() throws IOException {
+		for(int i=0;i<transactions.length;i++) {
+			transactions[i].getReceipt();
+		}
 	}
 }

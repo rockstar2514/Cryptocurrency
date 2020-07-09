@@ -1,6 +1,7 @@
 package com.BlockChain.Node;
-
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -26,10 +27,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonWriter;
 import com.sun.net.httpserver.HttpExchange;
@@ -44,12 +43,14 @@ import com.google.common.io.ByteStreams;
 
 //* This class is the one that will receive Transactions
 public class Server {
-
-	protected volatile static TreeMap<Link,Output> unusedOutputs;//TODO deal with this.quite inefficient
-	protected volatile static TreeSet < Transaction > pendingTransactions;// Transactions yet to be mined
-	protected volatile static BlockChain ledger;//Out own blockChain//TODO reduce memory consumption by writing to a local file
-	protected volatile static ArrayList<String> Peers;// Address of Peers
-	protected volatile static int peerLimit=5;// Peer limit to enable better networking
+	//Big Tests
+	//Test1 try to see if BodyPublishers Will giev problem somwhere in sending json as String
+	//Test utf-8 or utf-16
+	protected volatile static TreeMap<Link,Output> unusedOutputs;
+	protected volatile static TreeSet < Transaction > pendingTransactions;
+	protected volatile static BlockChain ledger;
+	protected volatile static ArrayList<String> Peers;
+	protected volatile static int peerLimit=5;
 	protected volatile static boolean pTb=true;
 	protected volatile static boolean uOb=true;
 	protected volatile  static boolean b=true;//Rename this 
@@ -86,7 +87,7 @@ public class Server {
 		for(parseTransaction pt:pendingTemp) {
 			Transaction tok=pt.getRealTransaction();
 			if(verifyTransaction(tok))
-			    modifyPT(tok,1);
+				modifyPT(tok,1);
 		}
 		sc.close();
 		server.createContext("/getPendingTransaction",new PendingHandler());
@@ -107,11 +108,11 @@ public class Server {
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(s+"/getBlock/"+Integer.toString(ind)))
 					.build();
-			HttpResponse<String> response = client.send(request,
-					HttpResponse.BodyHandlers.ofString());
+			HttpResponse<byte[]> response = client.send(request,
+					HttpResponse.BodyHandlers.ofByteArray());
 			if(response.statusCode()==404)
 				break;
-			byte[] binarydata=response.body().getBytes();
+			byte[] binarydata=response.body();
 			Block b=new Block(binarydata);
 			if(verifyBlock(b)){
 				modifyLedger(b,1);
@@ -155,11 +156,11 @@ public class Server {
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(curr+"/newPeer"))
 					.POST(HttpRequest.BodyPublishers.ofString(json))
-					.build();//TODo test this for sending json as String O TEST need t
+					.build();//TODO test this for sending json as String O TEST need t JS AND python code
 			HttpResponse<String> response = client.send(request,
-					HttpResponse.BodyHandlers.ofString());
-			if(response.statusCode()!=404){
-				Peers.add(curr);
+					HttpResponse.BodyHandlers.ofString());//TODO check if UTF-8 works
+			if(response.statusCode()!=404) {
+				modifyPeer(curr,1);
 			}
 			request=HttpRequest.newBuilder()
 					.uri(URI.create(curr+"/getPeers"))
@@ -167,20 +168,20 @@ public class Server {
 			response = client.send(request,
 					HttpResponse.BodyHandlers.ofString());
 			Gson gson=new Gson();
-			Map<? , ?> map=gson.fromJson(response.body(), Map.class);//TODO test this locally with String arguement
+			Map<? , ?> map=gson.fromJson(response.body(), Map.class);
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
 				@SuppressWarnings("unchecked")
-				ArrayList<String> arr=(ArrayList< String >)(entry.getValue());//exception handling
+				ArrayList<String> arr=(ArrayList< String >)(entry.getValue());
 				for(int i=0;i<arr.size();i++) {
 					String now=arr.get(i);
 					if(now.endsWith("/"))now=now.substring(0,now.length()-1);
-					if(!covered.contains(now)) {//TODO test thsi contains function
+					if(!covered.contains(now)) {
 						potential.add(now);
 						covered.add(now);
 					}
 				}
 			}
-			potential.remove(curr);//TODO TEST this
+			potential.remove(curr);
 		}
 	}
 	protected static synchronized boolean verifyTransaction(Transaction t) throws InvalidKeyException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, SignatureException {
@@ -203,7 +204,7 @@ public class Server {
 					return false;
 				else{
 					s.add(l);
-					Output p=UOcopy.get(l);//TODO take care of memeory consumption
+					Output p=UOcopy.get(l);//TODO take care of memory consumption
 					byte[] signingdata=new byte[68];
 					byte[] hash1=Util.parseHexToByte(key1);
 					for(int j=0;j<32;j++) {
@@ -305,7 +306,7 @@ public class Server {
 				EncryptionClient enc=new EncryptionClient();
 				while(true) {
 					b=true;
-					Thread.sleep(2000);
+					Thread.sleep(2000);//TODO maybe modify this to get more Transactions in
 					ArrayList<Transaction> tees=new ArrayList<Transaction>();
 					int len=0;
 					TreeSet<Link > s=new TreeSet<Link>();
@@ -315,36 +316,18 @@ public class Server {
 						boolean bob=true;
 						TreeSet<Link> s_=new TreeSet<Link>();
 						Input inp=t.getInput();
-						Output op=t.getOutput();
-						byte[] opData=md.digest(op.getData());
-						long inputcoins=0;
-						long outputcoins=0;
-						outputcoins=op.getCoins();
 						for(int j=0;j<inp.getNumberofInputs();j++) {
 							String TID=inp.getID(j);
 							int index=inp.getOutputIndex(j);
-							if(!s.contains(new Link(TID,index))&&!s_.contains(new Link(TID,index))&&uOcopy.containsKey(new Link(TID,index))){//uOb here
+							if(!s.contains(new Link(TID,index))&&!s_.contains(new Link(TID,index))&&uOcopy.containsKey(new Link(TID,index))){
 								s.add(new Link(TID,index));
-								s_.add(new Link(TID,index));
-								Output o=uOcopy.get(new Link(TID,index));
-								inputcoins+=o.getCoins(index);
-								byte signingdata[]=new byte[68];
-								byte tidData[]=Util.parseHexToByte(TID);
-								for(int l=0;l<tidData.length;l++)
-									signingdata[l]=tidData[l];
-								byte indData[]=Util.toByte(index);
-								for(int l=0;l<indData.length;l++)
-									signingdata[32+l]=indData[l];
-								for(int l=0;l<opData.length;l++)
-									signingdata[36+l]=opData[l];//TODO verify formula 1
-								if(!enc.verify(inp.getSignature(j), signingdata, o.getKey(index)))
-									bob=false;//verify if this works separately
+								s_.add(new Link(TID,index));//TODO verify if checkTransaction does it job properly
 							}
-							else
+							else{
 								bob=false;
+								break;
+							}
 						}
-						if(inputcoins>outputcoins)
-							bob=false;
 						if(bob==true&&len+t.getSize()<=1e6)
 							tees.add(t);
 						else {
@@ -352,21 +335,17 @@ public class Server {
 								s.remove(l);	
 							}
 						}
-						//verify this properly
-						//TODO managemnet of ConcurrentModificationException
 					}
-					if(tees.size()>0) {
-						//TODO Add Coinbase Transactions
+					if(tees.size()>0) {//TODO Add Coinbase Transactions
 						Transaction param[]=new Transaction[tees.size()];
 						for(int i=0;i<tees.size();i++)
 							param[i]=tees.get(i);
 						Link l=modifyLedger(null,0);
 						Block newb=new Block(l.b,l.TID.substring(32,64),param,l.TID.substring(0,32));//TODO Verify if Hash length is 32
-						//mining part begins
+						String targ=l.TID.substring(0,32);
 						byte head[]=newb.getHeader();
 						byte flag=0;
 						long non=0;
-						// MessageDigest md = MessageDigest.getInstance("SHA-256");
 						while(b==true&&flag==0) {
 							Instant now=Instant.now();
 							long time=now.getEpochSecond()*1000+((long)now.getNano());
@@ -377,7 +356,7 @@ public class Server {
 							for(int i=0;i<8;i++)
 								head[4+32+32+32+8+i]=nonce[i];
 							byte[] currHash=md.digest(head);
-							if(Util.cmpHex(Util.parseByteToHex(currHash),ledger.getTarget())<0)
+							if(Util.cmpHex(Util.parseByteToHex(currHash),targ)<0)
 							{
 								newb.setTimestamp(time);
 								newb.setNonce(non);
@@ -385,29 +364,18 @@ public class Server {
 							}
 							non++;
 						}
-						if(flag==1){  //later add consition for simultaneous mining and recieving 
-							modifyLedger(newb,1);
-							removeTrans(newb);
-							removeIaddO(newb);
-							for(int i=0;i<Peers.size();i++) {
-								String peers1=Peers.get(i);
-								//TODO send to everyone
-							}
+						if(flag==1){  //later add condition for simultaneous mining and recieving
+							//TODO verify this part again
+							Server.modifyLedger(newb,1);
+							Server.removeTrans(newb);
+							Server.removeIaddO(newb);
+							Server.sendBlock(newb);
 						}
 					}
 				}
-			} catch (NoSuchAlgorithmException e) {
+			} catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException | InterruptedException e) {
 				e.printStackTrace();
-			} catch (InvalidAlgorithmParameterException e) {
-				e.printStackTrace();
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-			} catch (SignatureException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} 
-
+			}
 		}
 	}
 	static class TransactionReciever implements HttpHandler{
@@ -416,7 +384,6 @@ public class Server {
 			Gson gson=new Gson();
 			String json=new String(ByteStreams.toByteArray(t.getRequestBody()));
 			parseTransaction tmp=gson.fromJson(json, parseTransaction.class);
-			tmp.getDetails();
 			String response="Transaction Recieved";
 			try {
 				Transaction t_=tmp.getRealTransaction();
@@ -425,45 +392,38 @@ public class Server {
 
 			} catch (NoSuchAlgorithmException | IOException | InvalidOutputException | InvalidInputException | InvalidKeyException | InvalidAlgorithmParameterException | SignatureException e) {
 				e.printStackTrace();
-			}
+			}//t.getResponseHeaders().add("Content-Type","application/json");//TODO verify if this works without setting Content-Type
 			t.sendResponseHeaders(200, response.length());
 			OutputStream os=t.getResponseBody();
-			os.write(response.getBytes());
-			os.close();
+			os.write(response.getBytes());os.close();
 		}
-
 	}
-	static class MindTheBlock implements HttpHandler{//notice the pun :))))
+	static class MindTheBlock implements HttpHandler{
 		@Override
 		public void handle(HttpExchange t) throws IOException{
 			try {
 				byte[] data=ByteStreams.toByteArray(t.getRequestBody());//Test this guava code
 				Block newb=new Block(data);//may throw thousands of Exception but if no exception thrown Block has been parsed properly from data 
-				if(verifyBlock(newb)) {
+				if(verifyBlock(newb)){
 					b=false;
-					uOb=false;
-					pTb=false;
 					modifyLedger(newb,1);
 					removeIaddO(newb);
 					removeTrans(newb);
-					//TODO send to everyone
-					String response="Done";
+					sendBlock(newb);
+					String response="Done";//TODO Check is this works without setting content header
 					t.sendResponseHeaders(200, response.length());
 					OutputStream os=t.getResponseBody();
-					os.write(response.getBytes());
-					os.close();
-
+					os.write(response.getBytes());os.close();
 				}else {
 					String response="Jhutaaaaa";
 					t.sendResponseHeaders(200, response.length());
 					OutputStream os=t.getResponseBody();
-					os.write(response.getBytes());
-					os.close();
+					os.write(response.getBytes());os.close();
 				}
 			} catch (InvalidKeyException | NoSuchAlgorithmException | IndexOutOfBoundsException | SignatureException
 					| InvalidAlgorithmParameterException | ConcurrentModificationException | IOException
 					| InvalidInputException | InvalidOutputException e) {
-				// TODO Auto-generated catch block
+				System.out.println("Error Occured while recieving Mined Block.");
 				e.printStackTrace();
 			}
 		}    
@@ -474,12 +434,13 @@ public class Server {
 		public void handle(HttpExchange exchange) throws IOException {
 			StringWriter sw=new StringWriter();
 			JsonWriter writer=new JsonWriter(sw);
+			ArrayList<String> pers=modifyPeer(null,0);
 			writer.beginObject();writer.name("peers");writer.beginArray();
-			for(int i=0;i<Peers.size();i++) {writer.value(Peers.get(i));}
+			for(int i=0;i<pers.size();i++) {writer.value(pers.get(i));}
 			writer.endArray();writer.endObject();writer.flush();sw.flush();
 			String s=sw.toString();
 			writer.close();sw.close();
-			exchange.getResponseHeaders().add("Content-Type","application/json");
+			exchange.getResponseHeaders().add("Content-Type","application/json");//TODO check what this does actually
 			exchange.sendResponseHeaders(200, s.length());
 			OutputStream os=exchange.getResponseBody();
 			os.write(s.getBytes());os.close();
@@ -488,27 +449,32 @@ public class Server {
 	static class PeerAdder implements HttpHandler{
 		@Override
 		public void handle(HttpExchange exchange) throws IOException {
-			//	            if(Peers.size()>=peerLimit) {
-			//	            	String response="Connection Failed";
-			//	            	OutputStream os=exchange.getResponseBody();
-			//				    exchange.sendResponseHeaders(500, response.length());
-			//				    os.write(response.getBytes());
-			//				    os.close();
-			//	            }
-			//	            else {
-			//			    Gson gson = new Gson();
-			//			    Reader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
-			//			    Map<?, ?> map = gson.fromJson(reader, Map.class);
-			//			    for (Map.Entry<?, ?> entry : map.entrySet()) {
-			//			        entry.getKey(); 
-			//			        Peers.add((String)(entry.getValue()));
-			//			    }
-			//			    reader.close();
-			//			    String response="Connection Reached";
-			//			    OutputStream os=exchange.getResponseBody();
-			//			    exchange.sendResponseHeaders(200, response.length());
-			//			    os.write(response.getBytes());
-			//			    os.close();
+			ArrayList<String> pers=modifyPeer(null,0);
+			if(pers.size()>=peerLimit) {
+				String response="Connection Rejected";
+				OutputStream os=exchange.getResponseBody();
+				exchange.sendResponseHeaders(500, response.length());
+				os.write(response.getBytes());
+				os.close();
+			}
+			else {
+				Gson gson = new Gson();
+				Reader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");//TODO why UTF-8
+				Map<?, ?> map = gson.fromJson(reader, Map.class);
+				for (Map.Entry<?, ?> entry : map.entrySet()) {
+					entry.getKey(); 
+					String s=(String)entry.getValue();
+					if(s.endsWith("/"))
+						s=s.substring(0,s.length()-1);
+					modifyPeer(s,1);//TODO remove ending 
+				}
+				reader.close();
+				String response="Connection Accepted";
+				OutputStream os=exchange.getResponseBody();
+				exchange.sendResponseHeaders(200, response.length());
+				os.write(response.getBytes());
+				os.close();
+			}
 		}
 	}
 
@@ -533,7 +499,7 @@ public class Server {
 				writer.endObject();
 			}
 			writer.endArray();writer.flush();
-	        sw.flush();
+			sw.flush();
 			String json=sw.toString();
 			sw.close();writer.close();
 			t.getResponseHeaders().add("Content-Type", "application/json");
@@ -542,76 +508,99 @@ public class Server {
 			os.write(json.getBytes());os.close();
 		} 
 	}
+
 	static class BlockSender implements HttpHandler{
 		@Override
 		public void handle(HttpExchange exchange) throws IOException {
-			//			// TODO send data required
-			//			//TODO some exception handling
-			//			exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
-			//			int ind=Integer.parseInt(exchange.getRequestURI().toString().substring(exchange.getRequestURI().toString().lastIndexOf("/")+1));//TODO maybe here exception
-			//			if(ind>=ledger.getSize()||ind<0)
-			//			{
-			//				exchange.sendResponseHeaders(404, 7);
-			//				OutputStream os=exchange.getResponseBody();
-			//				os.write("fuckoff".getBytes());
-			//				os.close();
-			//			}
-			//			else {
-			//				Block message=ledger.getBlock(ind);//TODO make this file retrieval
-			//			    byte[] data1=message.sendHeader();
-			//			    byte[] data2=message.getData();
-			//			    byte[] fulldata=new byte[data1.length+data2.length];
-			//			    for(int i=0;i<data1.length;i++)
-			//			    	fulldata[i]=data1[i];
-			//			    for(int j=0;j<data2.length;j++){
-			//			    	fulldata[data1.length+j]=data2[j];
-			//			    }
-			//			    exchange.sendResponseHeaders(200, fulldata.length);
-			//			    OutputStream os=exchange.getResponseBody();
-			//			    os.write(fulldata);
-			//			    os.close();
-			//			}
+			String s=exchange.getRequestURI().toString();
+			if(s.endsWith("/"))
+				s=s.substring(0,s.length()-1);
+			try
+			{
+				int num=Integer.parseInt(s.substring(s.lastIndexOf("/")+1,s.length()));
+				Link l=modifyLedger(null,0);
+				if(l.b<=num) {
+					exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+					exchange.sendResponseHeaders(404, "Get Lost".length());
+					OutputStream os = exchange.getResponseBody();
+					os.write("Get Lost".getBytes());os.close();
+				}else {
+					InputStream reader=new FileInputStream("Block"+num);
+					byte[] data=reader.readAllBytes();
+					exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+					exchange.sendResponseHeaders(200, data.length);
+					OutputStream os = exchange.getResponseBody();
+					os.write(data);os.close();
+				}
+			}
+			catch(NumberFormatException | NoSuchAlgorithmException e) {
+				exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+				exchange.sendResponseHeaders(404, "Get Lost".length());
+				OutputStream os = exchange.getResponseBody();
+				os.write("Get Lost".getBytes());os.close();
+			}
 		}
 	}
-	protected static synchronized void removeTrans(Block b) throws ConcurrentModificationException{
+	protected static synchronized void removeTrans(Block b){
 		Transaction[] arr=b.getTransactions(); 
 		for(Transaction t:arr) {
-			modifyPT(t,-1);//Concurrent Modification Exception possible in//So make GLobal Variable keeping in check of conccurrent Modifications
+			modifyPT(t,-1);
+		}
+	}
+	protected static synchronized void sendBlock(Block b) {
+		ArrayList<String> listOfPeers=modifyPeer(null,0);
+		HttpClient client=HttpClient.newHttpClient();
+		for(String s:listOfPeers) {
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(s+"/newBlock"))
+					.POST(HttpRequest.BodyPublishers.ofByteArray(b.getData()))
+					.build();//TODO test this out
+			try {
+				HttpResponse<String> response = client.send(request,
+						HttpResponse.BodyHandlers.ofString());//TODO Check that here I recieve output as String
+				System.out.println(response.body()+": "+s);
+			} catch (IOException | InterruptedException e) {
+				System.out.println("Connection Interrupted / IOException sending to Peer: "+s);
+				e.printStackTrace();
+			}
 		}
 	}
 	protected static synchronized boolean verifyBlock(Block b) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidAlgorithmParameterException {
+		//TODO separate case of Block 0
 		//NOTE any updaes on Block Verification can be made here
-		if(b.getbah()==false)//TODO set bah for direct production
+		if(!b.getbah())//TODO set bah for direct production
 			return false;
 		TreeSet<Link> s=new TreeSet<Link>();
 		Transaction arr[]=b.getTransactions();
 		//TODO verify coinbase transaction
 		TreeMap<Link,Output> UOcopy=modifyUO(null,null,0);
-		for(int i=1;i<arr.length;i++) {//Dont verify coinbase transaction
+		for(int i=1;i<arr.length;i++) {
 			Transaction t=arr[i];
+			if(!verifyTransaction(t))
+				return false;
 			Input inp=t.getInput();
 			Output op=t.getOutput();
-			long inputcoins=0;
-			long outputcoins=op.getCoins();
-			for(int j=0;j<inp.getNumberofInputs();i++) {
+			for(int j=0;j<inp.getNumberofInputs();j++) {
 				Link l=new Link(inp.getID(j),inp.getOutputIndex(j));
 				if(s.contains(l)||!UOcopy.containsKey(l)) {
 					return false;
 				}
 				else {
-					inputcoins+=UOcopy.get(l).getCoins(inp.getOutputIndex(j));
+					s.add(l);
 				}
 			}
 			//TODO Verify Output
-			if(inputcoins>outputcoins)
-				return false;
 		}
 		Link l=modifyLedger(null,0);
+		/*
+		 * Verify modifyLedger(null,0)
+		 * and following part
+		 */
 		if(b.getIndex()!=l.b)
 			return false;
-		if(b.getPhash().compareTo(l.TID.substring(32,64))!=0)//TODO check substring size
+		if(b.getPhash().compareTo(l.TID.substring(64,128))!=0)//TODO check substring size//TODO exception of Block 0
 			return false;
-		if(b.getTarget().compareTo(l.TID.substring(0,32))!=0)
+		if(b.getTarget().compareTo(l.TID.substring(0,64))!=0)
 			return false;
 		return true;
 	}
