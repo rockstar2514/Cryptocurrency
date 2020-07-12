@@ -17,6 +17,7 @@ public class BlockChain {
      protected BlockChain(String d,String target) {
     	 dir=d;
     	 this.target=target;
+    	 last=null;
      }
      protected void addBlock(Block b) {	 
     try {Files.write(Paths.get(dir), Util.append(b.getHeader(), b.getData()), StandardOpenOption.APPEND);FileOutputStream out = new FileOutputStream("Block"+size);out.write(Util.append(b.getHeader(), b.getData()));out.close();size++;last=b;} catch (IOException e) {System.out.println("File to print Block Chain to not found . Fuck OFf");System.exit(1);e.printStackTrace();}	

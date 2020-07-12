@@ -18,6 +18,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SignatureException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ import com.google.common.io.ByteStreams;
 //* This class is the one that will receive Transactions
 public class Server {
 	//Big Tests
-	//Test1 try to see if BodyPublishers Will giev problem somwhere in sending json as String
+	//Test1 try to see if BodyPublishers Will give problem somwhere in sending json as String
 	//Test utf-8 or utf-16
 	protected volatile static TreeMap<Link,Output> unusedOutputs;
 	protected volatile static TreeSet < Transaction > pendingTransactions;
@@ -54,7 +55,13 @@ public class Server {
 	protected volatile static boolean pTb=true;
 	protected volatile static boolean uOb=true;
 	protected volatile  static boolean b=true;//Rename this 
+	protected volatile static PublicKey lock;
+	protected volatile static PublicKey unlock;
+	protected volatile static long BLOCK_REWARD;
+	protected volatile static TreeMap<String, TreeSet< Link >  > Mapping;
+	protected volatile static TreeMap<String,String> Alias;
 	public static void main(String[] args) throws IOException, InterruptedException, NoSuchAlgorithmException, InvalidInputException, InvalidOutputException, InvalidKeyException, InvalidAlgorithmParameterException, SignatureException {
+		//TODO lead keys from pem file :))
 		Scanner sc=new Scanner(System.in);
 		//TODO should I use UTF-8 OR UTF-16 for pending transaction
 		//Update BlockChain
@@ -65,6 +72,8 @@ public class Server {
 		pendingTransactions=new TreeSet<Transaction>();
 		unusedOutputs=new TreeMap<Link,Output>();
 		Peers=new ArrayList<String>();
+		Mapping=new TreeMap<String , TreeSet<Link > >();
+		Alias=new TreeMap<String, String>();
 		String address="";//Input your own address after tunneling via ngrok
 		address=sc.nextLine();
 		String OriginalPeer="";//Input initial peers//TODO add optionally functionality to input more than 1 address
@@ -96,6 +105,9 @@ public class Server {
 		server.createContext("/getPeers",new PeerSender());
 		server.createContext("/newBlock",new MindTheBlock());
 		server.createContext("/newTransaction",new TransactionReciever());
+		server.createContext("/addAlias",new AliasAdder());
+		server.createContext("/getPublicKey",new PublicKeyFetcher());
+		server.createContext("/getUnusedOutputs",new UnusedOutputsFetcher());
 		Thread t=new Thread(new Miner());
 		t.start();
 	}
@@ -115,9 +127,9 @@ public class Server {
 			byte[] binarydata=response.body();
 			Block b=new Block(binarydata);
 			if(verifyBlock(b)){
-				modifyLedger(b,1);
 				removeTrans(b);
 				removeIaddO(b);
+				modifyLedger(b,1);
 			}
 			else {//TODO ADD LOGGER MESSAGE
 				System.exit(1);
@@ -125,11 +137,14 @@ public class Server {
 			ind++;
 		}
 	}
-	protected static synchronized void removeIaddO(Block b) {
+	protected static synchronized void removeIaddO(Block b) throws IOException {
 		Transaction arr[]=b.getTransactions();
 		for(Transaction t:arr) {
 			Input inp=t.getInput();
-			for(int i=0;i<inp.getNumberofInputs();i++) {
+			int n=0;
+			if(inp!=null)
+				n=inp.getNumberofInputs();
+			for(int i=0;i<n;i++) {
 				modifyUO(new Link(inp.getID(i),inp.getOutputIndex(i)),null,-1);
 			}
 			Output op=t.getOutput();
@@ -155,6 +170,7 @@ public class Server {
 			String curr=potential.first();
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(curr+"/newPeer"))
+					.header("Content-Type", "application/json")
 					.POST(HttpRequest.BodyPublishers.ofString(json))
 					.build();//TODO test this for sending json as String O TEST need t JS AND python code
 			HttpResponse<String> response = client.send(request,
@@ -184,7 +200,7 @@ public class Server {
 			potential.remove(curr);
 		}
 	}
-	protected static synchronized boolean verifyTransaction(Transaction t) throws InvalidKeyException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, SignatureException {
+	protected static synchronized boolean verifyTransaction(Transaction t) throws InvalidKeyException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, SignatureException, IOException {
 		long inputcoins=0;
 		long outputcoins=0;//TODO negative number checks
 		Input input=t.getInput();
@@ -249,12 +265,16 @@ public class Server {
 			return ts;
 		}
 	}
-	protected static synchronized TreeMap<Link, Output> modifyUO(Link l, Output o, int mode){
+	protected static synchronized TreeMap<Link, Output> modifyUO(Link l, Output o, int mode) throws IOException{
 		if(mode==1) {
+			String key=o.getKeyInString(l.b);
+			Mapping.get(key).add(l);
 			unusedOutputs.put(l, o);
 			return null;
 		}
 		else if(mode==-1) {
+			String key=o.getKeyInString(l.b);
+			Mapping.get(key).remove(l);
 			unusedOutputs.remove(l);
 			return null;
 		}
@@ -273,7 +293,44 @@ public class Server {
 			return null;
 		}
 		else {
+			if(ledger.getSize()==0)
+			{
+				String s="";
+				for(int i=0;i<64;i++) {
+					s+="0";
+				}
+				return new Link(ledger.getTarget()+s,ledger.getSize());
+			}
 			return new Link(ledger.getTarget()+ledger.getTop().getHash(),ledger.getSize());
+
+
+		}
+	}
+	protected static synchronized TreeMap<String, TreeSet< Link > > modifyMapping(String s,Link l,int mode){
+		if(mode==0) {
+			TreeMap<String, TreeSet< Link > > clone=new TreeMap<String, TreeSet< Link > >();
+			for(Map.Entry<String, TreeSet< Link > > entry : Mapping.entrySet()) {
+				@SuppressWarnings("unchecked")
+				TreeSet<Link> cl=(TreeSet<Link>)(entry.getValue().clone());
+				clone.put(entry.getKey(),cl);
+			}
+			return clone;
+		}
+		else {
+			Mapping.get(s).add(l);
+			return null;
+		}
+	}
+	@SuppressWarnings("unchecked")
+	protected static synchronized TreeMap<String, String> modifyAlias(String key,String val, int mode){
+		if(mode==0) {
+			return (TreeMap<String,String>)Alias.clone();
+		}
+		else {
+		    if(!Alias.containsKey("key")) {
+		    	Alias.put(key,val);
+		    }
+		    return null;
 		}
 	}
 	protected static synchronized ArrayList<String > modifyPeer(String target,int mode){
@@ -309,17 +366,21 @@ public class Server {
 					Thread.sleep(2000);//TODO maybe modify this to get more Transactions in
 					ArrayList<Transaction> tees=new ArrayList<Transaction>();
 					int len=0;
+					long fees=0;
 					TreeSet<Link > s=new TreeSet<Link>();
 					TreeSet<Transaction> copy=modifyPT(null,0);
 					TreeMap<Link,Output> uOcopy=modifyUO(null,null,0);
+					long inputcoins=0,outputcoins=0;
 					for(Transaction t:copy) {
 						boolean bob=true;
+						outputcoins+=t.getOutput().getCoins();
 						TreeSet<Link> s_=new TreeSet<Link>();
 						Input inp=t.getInput();
 						for(int j=0;j<inp.getNumberofInputs();j++) {
 							String TID=inp.getID(j);
 							int index=inp.getOutputIndex(j);
 							if(!s.contains(new Link(TID,index))&&!s_.contains(new Link(TID,index))&&uOcopy.containsKey(new Link(TID,index))){
+								inputcoins+=uOcopy.get(new Link(TID,index)).getCoins();
 								s.add(new Link(TID,index));
 								s_.add(new Link(TID,index));//TODO verify if checkTransaction does it job properly
 							}
@@ -328,8 +389,10 @@ public class Server {
 								break;
 							}
 						}
-						if(bob==true&&len+t.getSize()<=1e6)
+						if(bob==true&&len+t.getSize()<=1e6){
 							tees.add(t);
+							fees+=outputcoins-inputcoins;
+						}
 						else {
 							for(Link l : s_) {
 								s.remove(l);	
@@ -337,9 +400,11 @@ public class Server {
 						}
 					}
 					if(tees.size()>0) {//TODO Add Coinbase Transactions
-						Transaction param[]=new Transaction[tees.size()];
+						Transaction param[]=new Transaction[tees.size()+1];
+						Transaction mine=new Transaction(null,new Output(1,new long[] {fees+BLOCK_REWARD},new PublicKey[] {lock}));
+						param[0]=mine;
 						for(int i=0;i<tees.size();i++)
-							param[i]=tees.get(i);
+							param[i+1]=tees.get(i);
 						Link l=modifyLedger(null,0);
 						Block newb=new Block(l.b,l.TID.substring(32,64),param,l.TID.substring(0,32));//TODO Verify if Hash length is 32
 						String targ=l.TID.substring(0,32);
@@ -375,6 +440,12 @@ public class Server {
 				}
 			} catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException | InterruptedException e) {
 				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidOutputException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
@@ -392,7 +463,8 @@ public class Server {
 
 			} catch (NoSuchAlgorithmException | IOException | InvalidOutputException | InvalidInputException | InvalidKeyException | InvalidAlgorithmParameterException | SignatureException e) {
 				e.printStackTrace();
-			}//t.getResponseHeaders().add("Content-Type","application/json");//TODO verify if this works without setting Content-Type
+			}
+			t.getResponseHeaders().add("Content-Type","text/plain");//TODO verify if this works without setting Content-Type
 			t.sendResponseHeaders(200, response.length());
 			OutputStream os=t.getResponseBody();
 			os.write(response.getBytes());os.close();
@@ -411,11 +483,13 @@ public class Server {
 					removeTrans(newb);
 					sendBlock(newb);
 					String response="Done";//TODO Check is this works without setting content header
+					t.getResponseHeaders().add("Content-Type","text/plain");
 					t.sendResponseHeaders(200, response.length());
 					OutputStream os=t.getResponseBody();
 					os.write(response.getBytes());os.close();
 				}else {
 					String response="Jhutaaaaa";
+					t.getResponseHeaders().add("Content-Type","text/plain");
 					t.sendResponseHeaders(200, response.length());
 					OutputStream os=t.getResponseBody();
 					os.write(response.getBytes());os.close();
@@ -424,6 +498,11 @@ public class Server {
 					| InvalidAlgorithmParameterException | ConcurrentModificationException | IOException
 					| InvalidInputException | InvalidOutputException e) {
 				System.out.println("Error Occured while recieving Mined Block.");
+				String response="GO on";
+				t.getResponseHeaders().add("Content-Type","text/plain");
+				t.sendResponseHeaders(200, response.length());
+				OutputStream os=t.getResponseBody();
+				os.write(response.getBytes());os.close();
 				e.printStackTrace();
 			}
 		}    
@@ -466,7 +545,7 @@ public class Server {
 					String s=(String)entry.getValue();
 					if(s.endsWith("/"))
 						s=s.substring(0,s.length()-1);
-					modifyPeer(s,1);//TODO remove ending 
+					modifyPeer(s,1);
 				}
 				reader.close();
 				String response="Connection Accepted";
@@ -520,7 +599,7 @@ public class Server {
 				int num=Integer.parseInt(s.substring(s.lastIndexOf("/")+1,s.length()));
 				Link l=modifyLedger(null,0);
 				if(l.b<=num) {
-					exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+					exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
 					exchange.sendResponseHeaders(404, "Get Lost".length());
 					OutputStream os = exchange.getResponseBody();
 					os.write("Get Lost".getBytes());os.close();
@@ -534,10 +613,163 @@ public class Server {
 				}
 			}
 			catch(NumberFormatException | NoSuchAlgorithmException e) {
-				exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+				exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
 				exchange.sendResponseHeaders(404, "Get Lost".length());
 				OutputStream os = exchange.getResponseBody();
 				os.write("Get Lost".getBytes());os.close();
+			}
+		}
+	}
+	static class AliasAdder implements HttpHandler{
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+			Gson gson = new Gson();
+			String json=new String(ByteStreams.toByteArray(exchange.getRequestBody()));
+			@SuppressWarnings("unchecked")
+			Map<String,String > map=gson.fromJson(json, Map.class);
+			String usrname=map.get("alias");
+			String key=map.get("publicKey");
+			TreeMap<String, String> alias=modifyAlias(null,null,0);//TODO fix these. It may lead to a lot of problems.
+			if(usrname!=null&&key!=null) {
+				if(alias.containsKey(usrname))
+				{
+					exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+					exchange.sendResponseHeaders(400, "Already Done".length());
+					OutputStream os = exchange.getResponseBody();
+					os.write("Already Done".getBytes());os.close();
+				}
+				else {
+					modifyAlias(usrname, key,1);
+					exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+					exchange.sendResponseHeaders(200, "Accepted".length());
+					OutputStream os = exchange.getResponseBody();
+					os.write("Accepted".getBytes());os.close();
+					ArrayList<String> pers=Server.modifyPeer(null,0);
+					HttpClient client=HttpClient.newHttpClient();
+					for(String s:pers) {
+						HttpRequest request = HttpRequest.newBuilder()
+								.uri(URI.create(s+"/addAlias"))
+								.header("Content-Type", "application/json")
+								.POST(HttpRequest.BodyPublishers.ofString(json))
+								.build();//TODO test this out
+						try {
+							HttpResponse<String> response = client.send(request,
+									HttpResponse.BodyHandlers.ofString());//Test BodyHandlers
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}	
+					}
+					
+				}
+			}
+			else {
+				exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+				exchange.sendResponseHeaders(404, "Off".length());
+				OutputStream os = exchange.getResponseBody();
+				os.write("Off".getBytes());os.close();
+			}
+		} 
+
+	}
+	static class PublicKeyFetcher implements HttpHandler{
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+			Gson gson = new Gson();
+			String json=new String(ByteStreams.toByteArray(exchange.getRequestBody()));
+			Map<String,String > map=gson.fromJson(json, Map.class);
+			String usrname=map.get("alias");//Test this
+			TreeMap<String, String> alias=modifyAlias(null,null,0);
+			if(usrname!=null&&alias.containsKey(usrname)) {
+				StringWriter sw=new StringWriter();
+				JsonWriter writer=new JsonWriter(sw);
+				writer.beginObject();
+				writer.name("PublicKey");
+				writer.value(alias.get(usrname));
+				writer.endObject();
+				writer.flush();
+				sw.flush();
+				String js=sw.toString();
+				writer.close();
+				sw.close();
+				exchange.getResponseHeaders().add("Content-Type", "application/json");
+				exchange.sendResponseHeaders(200,js.length());
+				OutputStream os = exchange.getResponseBody();
+				os.write(js.getBytes());os.close();
+			}
+			else{
+				exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+				exchange.sendResponseHeaders(404, "Off".length());
+				OutputStream os = exchange.getResponseBody();
+				os.write("Off".getBytes());os.close();
+			}
+		}
+
+	}
+	static class UnusedOutputsFetcher implements HttpHandler{
+		@Override
+		public void handle(HttpExchange exchange) throws IOException {
+			Gson gson = new Gson();
+			String json=new String(ByteStreams.toByteArray(exchange.getRequestBody()));
+			@SuppressWarnings("unchecked")//replace with exception
+			Map<String,String > map=gson.fromJson(json, Map.class);
+			String pkey=map.get("publicKey");
+			String usrname=map.get("alias");
+			TreeMap<String, String> alias=modifyAlias(null,null,0);
+			TreeMap<String, TreeSet<Link> > mapping=modifyMapping(null,null,0);
+			if(pkey!=null||usrname!=null) {
+				int f=1;
+				if(pkey==null) {
+					if(alias.containsKey(usrname))
+					    pkey=alias.get(usrname);
+					else
+						f=0;
+					if(!mapping.containsKey(pkey))
+						f=0;
+				}
+				if(f==1) {
+					StringWriter sw=new StringWriter();
+					JsonWriter writer=new JsonWriter(sw);
+					writer.beginObject();
+					writer.name("unusedOutputs");
+					writer.beginArray();
+					TreeSet<Link> ts=mapping.get(pkey);
+					TreeMap<Link,Output> UO=modifyUO(null,null,0);
+					for(Link l:ts) {
+						writer.beginObject();
+						writer.name("transactionId");
+						writer.value(l.TID);
+						writer.name("index");
+						writer.value(l.b);
+						writer.name("amount");
+						writer.value(UO.get(l).getCoins());//Manage Exception here
+						writer.endObject();
+					}
+					writer.endArray();
+					writer.endObject();
+					writer.flush();
+					sw.flush();
+					String js=sw.toString();
+					exchange.getResponseHeaders().add("Content-Type", "application/json");
+					exchange.sendResponseHeaders(200, js.length());
+					OutputStream os=exchange.getResponseBody();
+					os.write(js.getBytes());
+					os.close();
+				}
+				else {
+					exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+					exchange.sendResponseHeaders(404, "Off".length());
+					OutputStream os = exchange.getResponseBody();
+					os.write("Off".getBytes());os.close();
+				}
+				
+			}
+			else {
+				exchange.getResponseHeaders().add("Content-Type", "application/text-plain");
+				exchange.sendResponseHeaders(404, "Off".length());
+				OutputStream os = exchange.getResponseBody();
+				os.write("Off".getBytes());os.close();
 			}
 		}
 	}
@@ -553,6 +785,7 @@ public class Server {
 		for(String s:listOfPeers) {
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(s+"/newBlock"))
+					.header("Content-Type", "application/octet-stream")
 					.POST(HttpRequest.BodyPublishers.ofByteArray(b.getData()))
 					.build();//TODO test this out
 			try {
@@ -565,7 +798,7 @@ public class Server {
 			}
 		}
 	}
-	protected static synchronized boolean verifyBlock(Block b) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidAlgorithmParameterException {
+	protected static synchronized boolean verifyBlock(Block b) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidAlgorithmParameterException, IOException {
 		//TODO separate case of Block 0
 		//NOTE any updaes on Block Verification can be made here
 		if(!b.getbah())//TODO set bah for direct production

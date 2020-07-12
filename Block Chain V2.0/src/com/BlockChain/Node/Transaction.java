@@ -36,7 +36,11 @@ public class Transaction implements Comparable<Transaction>{
 	protected Transaction(Input input,Output output) throws NoSuchAlgorithmException {
 		this.input=input;//TODO take care of this/inspect properly
 		this.output=output;
-		byte[] arr1=input.getData();
+		byte[] arr1=null;
+		if(input==null)
+			arr1=new byte[4];
+		else
+			arr1=input.getData();
 		byte[] arr2=output.getData();
 		//TODO deposit rest to Miner ( Very Important )
 		fulldata=new byte[arr1.length+arr2.length];

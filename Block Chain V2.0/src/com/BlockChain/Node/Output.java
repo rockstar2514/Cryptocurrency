@@ -186,4 +186,14 @@ public class Output {
     	  }
     	  return tot;
       }
+      protected String getKeyInString(int ind) throws IOException {
+          StringWriter sw=new StringWriter();
+	      PemWriter now=new PemWriter(sw);
+	      now.writeObject(new PemObject("PUBLIC KEY",keys[ind].getEncoded()));
+	      now.flush();
+	      String done=sw.toString();
+	      now.close();
+	      done=done.replaceAll("\r", "");
+	      return done;
+      }
 }
