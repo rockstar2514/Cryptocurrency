@@ -4,7 +4,6 @@ The aim of the project was to create a functioning Block Chain Network where pee
 be people designing their own nodes under this project<br></p>
 
 ## The Model
-<p> Our Block Chain model was different from the actual Block Chain in a number of ways. <br>
 Out Block Chain would work as follows :-<br>
 A transaction would be sent by a user on to any node. This node would then forward it to its peers <br>
 and the peer forwarding would continue so that the transaction propagates throught the entire network.<br>
