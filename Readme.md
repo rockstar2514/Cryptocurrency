@@ -54,6 +54,7 @@ Our node initialises with Blocks from that Node
 3. Now simply cd to this directory and run java -jar BundledNode.jar . Remember to give permissions to make changes in the directory
 4. Soon, u will start to see logs coming up of wheather a transaction is being searched for, a block has been recieved, a block is being mined ,a transaction is recieved and others
 
+>Note : There is a slight discrepancy, the source code used two version of guava whereas the jar file uses just one(the older one). Both work however .Will soon fix it.
 
 
 
