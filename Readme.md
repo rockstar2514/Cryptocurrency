@@ -38,6 +38,25 @@ A number of Java Dependencies were used
 <li> Gson 2.8.5 </li>
 </ul>
 
+## To run as a node
+Requirements
+JDK ( latest version possible )
+The program functions on the Node currently being run at <https://iitkbucks.pclub.in>
+Our node initialises with Blocks from that Node
+
+### Instructions
+1. Hover to the Block Chain folder and import BundledNode.jar , bc.dat and config.json
+2. First tunnel port 8000 of your local server via ngrok or any other service.
+3. On ngrok you, will recieve a URL which will show your public URL where you have tunneled your port 8000 to. Copy that address.
+2. Configure config.json with this address against the address field.
+3. Also, copy paste your public and private key in the config.json
+3. Ensure the bc.dat file is present in the directory (wheather empty or not).
+3. Now simply cd to this directory and run java -jar BundledNode.jar . Remember to give permissions to make changes in the directory
+4. Soon, u will start to see logs coming up of wheather a transaction is being searched for, a block has been recieved, a block is being mined ,a transaction is recieved and others
+
+
+
+
 
   
 
