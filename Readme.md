@@ -1,5 +1,5 @@
 # IITKBUCKS Application
-<p>The repository is a Project I had taken under the Science and Technology Coucil,IIT Kanpur.<br>
+<p>The repository is a Project I had taken under the Science and Technology Coucil, IIT Kanpur.<br>
 The aim of the project was to create a functioning Block Chain Network where peers would<br>
 be people designing their own nodes under this project<br></p>
 
